@@ -1,0 +1,29 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Basic EC2",
+    "Resources": {
+        "Ec2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "awsdemo",
+                "ImageId": "ami-165a0876",
+                "InstanceType": "t2.micro",
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "PrimaryInterface"
+                        },
+                        "DeviceIndex": "0"
+                    }
+                ]
+            }
+        },
+        "PrimaryInterface": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId" : "subnet-40d79125"
+            }
+        }
+    }
+}

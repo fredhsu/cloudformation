@@ -1,0 +1,14 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Basic EC2",
+    "Resources": {
+        "Ec2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "awsdemo",
+                "ImageId": "ami-60633e00",
+                "InstanceType": "c4.large"
+            }
+        }
+    }
+}
