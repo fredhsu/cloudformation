@@ -38,18 +38,52 @@ When I got this error it would rollback and remove everything it created
 * Add security group to vpc
 * create internet gateway
 * Attach igw to the VPC
+* Does not create subnet by default
 
 ## vpc-sg-igw-subnet-ec2.json
-* *In progress*
-* Create a VPC with a new EC2 instance and an associated security group
-* Create with a VPC security group since I can't create it with an instance one
+* Create VPC with security group, igw, and multiple subnets within the CIDR
+* Create network interfaces in the subnets
+* Attach the network interfaces to an EC2
+* Launch EC2 with multiple subnets
+* One subnet is designed to go outside, so assign public IP automatically on that one
+* Have to move to c4.large to support 3 interfaces
+* Cannot use instance level security groups and add NICs, instead add the SGs on the NIC config
+    * For outside interface use defined security group to only allow specific traffic
+    * Default SG allows everything on other interfaces
+* Can't SSH due to route table config.  Need to associate route table with the subnets and point default route to igw
 
-## vpc-sg-igw-3subnet-ec2-3nic-sg
-* *In progress*
-* Create all of the above plus add 3 interfaces and subnets
+## vpc-sg-igw-subnet-ec2-rt.json
+* *in progress*
+* Same as above, but now adding in route tables for the subnets
+* For mgmt/outbound subnet add a default route pointing to igw
+* For other subnets default route points to the NICs from above
+* RouteTable
+* routes -- may need DependsOn to make sure igw and nics are there
+    * DependsOn take a list of strings that refer to the key names of the objects, not the object IDs (i.e. dont' need a ref)
+* SubnetRouteTableAssociation
+* Notice that the creation of the vpc creates a *Main* route table, but there is no way to reference it and it doesn't really need to be used.  Just means we have to explicitly create all the route tables and can't reuse that onej
+    * https://forums.aws.amazon.com/thread.jspa?threadID=97060
+* Have to use NetworkInterfaceId instead of GatewayId for the routes that point to the VM interfaces
+
+
+## vpc-sg-igw-subnet-ec2-rt-config.json
+* Now assigning static IP addresses to the network interfaces to use for the config
+* Need to grab the private IP of the interfaces and assign that to the config of the switch
+* Apply the config to the image as part of bootup
+
 
 ## plus use ElasticIP
-## plus insert text based on subnet info
+## Add EC2 to second AZ
+## End goal
+Create one vpc with:
+* Two AZ's
+* Multiple subnets that will attach to NICs an EC2 instance (*rtr*)
+* Use user text to configure the *rtr* instance
+* Security groups for those subnets to allow traffic to flow
+* Set route tables for each subnet to point to these EC2 interfaces
+* Other EC2 instances that will use those routes to forward traffic to rtr instances
+* Repeat in a 2nd AZ 
+
 
 ## cross-stack reference
 http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crossstackref.html
@@ -61,3 +95,13 @@ http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crosss
     aws cloudformation wait stack-create-complete
 
     aws cloudformation delete-stack --stack-name test13
+
+## Questions/Notes
+* How to integrate into CI/CD
+* Could have a CF template that deploys new version of app when build is done
+* github.com/cloudtools/troposphere
+* Use a template to create and manage a *stack*
+* When I go this error message `An error occurred (ValidationError) when calling the CreateStack operation: Template format error: unsupported structure.` it meant that I mistyped a parameter when running `aws cloudformation` CLI.  
+* How do I address the subnets/generate them.. maybe scripting
+* Script the building of the template
+* Do we need a route table per subnet, or can we use one RT to service multiple subnets?  

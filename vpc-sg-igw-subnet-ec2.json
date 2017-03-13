@@ -1,0 +1,181 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC with sg and igw",
+    "Resources": {
+        "demovpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.2.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "demovpc"
+                    }
+                ]
+            }
+        },
+        "sshsg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow SSH",
+                "VpcId": {
+                    "Ref": "demovpc"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "demovpcigw": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "demovpc-igw"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "demovpc"
+                },
+                "InternetGatewayId": {
+                    "Ref": "demovpcigw"
+                }
+            }
+        },
+        "snoutwest1a": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "demovpc"
+                },
+                "CidrBlock": "10.2.1.0/24",
+                "AvailabilityZone": "us-west-1a",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "subnet-out-west1a"
+                    }
+                ]
+            }
+        },
+        "snwebwest1a": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "demovpc"
+                },
+                "CidrBlock": "10.2.11.0/24",
+                "AvailabilityZone": "us-west-1a",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "subnet-vrfweb-west1a"
+                    }
+                ]
+            }
+        },
+        "snappwest1a": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "demovpc"
+                },
+                "CidrBlock": "10.2.12.0/24",
+                "AvailabilityZone": "us-west-1a",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "subnet-vrfapp-west1a"
+                    }
+                ]
+            }
+        },
+        "Ec2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "awsdemo",
+                "ImageId": "ami-165a0876",
+                "InstanceType": "c4.large",
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "MgmtIntf"
+                        },
+                        "DeviceIndex": "0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "demo-ec2-west1a"
+                    }
+                ]
+            }
+        },
+        "MgmtIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "snoutwest1a"
+                },
+                "GroupSet" : [ {"Ref" : "sshsg"} ]
+            }
+        },
+        "WebVrfIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "snwebwest1a"
+                }
+            }
+        },
+        "AppVrfIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "snappwest1a"
+                }
+            }
+        },
+        "WebNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "Ec2Instance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "WebVrfIntf"
+                },
+                "DeviceIndex": "1"
+            }
+        },
+
+        "AppNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "Ec2Instance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "AppVrfIntf"
+                },
+                "DeviceIndex": "2"
+            }
+        }
+    }
+}
