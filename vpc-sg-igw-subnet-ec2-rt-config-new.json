@@ -249,7 +249,8 @@
                     {
                         "Ref": "LOBSSHSg"
                     }
-                ]
+                ],
+                            "PrivateIpAddress": "10.2.1.6"
             }
         },
         "LOB1WebIntf": {
@@ -258,7 +259,8 @@
                 "SourceDestCheck": false,
                 "SubnetId": {
                     "Ref": "LOB1WebSn"
-                }
+                },
+                "PrivateIpAddress": "10.2.11.6"
             }
         },
         "LOB1AppIntf": {
@@ -267,7 +269,8 @@
                 "SourceDestCheck": false,
                 "SubnetId": {
                     "Ref": "LOB1AppSn"
-                }
+                },
+                "PrivateIpAddress": "10.2.12.6"
             }
         },
         "LOB1WebNetworkInterfaceAttachment": {
