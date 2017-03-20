@@ -1,0 +1,96 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC with sg and igw",
+    "Resources": {
+        "LOBVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.2.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-vpc"
+                    }
+                ]
+            }
+        },
+        "LOBSSHSecGrp": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow SSH",
+                "VpcId": {
+                    "Ref": "LOBVPC"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "LOBIGW": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-igw"
+                    }
+                ]
+            }
+        },
+        "LOBAttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "LOBVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "LOBIGW"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "VPCId": {
+            "Description": "VPC ID",
+            "Value": {
+                "Ref": "LOBVPC"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPCID"
+                }
+            }
+        },
+        "vRouterSecurityGroup": {
+            "Description": "The security group ID to use for vrouter",
+            "Value": {
+                "Fn::GetAtt": [
+                    "LOBSSHSecGrp",
+                    "GroupId"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SecurityGroupID"
+                }
+            }
+        },
+        "VPCIGW" : {
+            "Description" : "VPC Internet Gateway",
+            "Value": {
+                "Ref": "LOBIGW"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPCIGW"
+                }
+            }
+        }
+    
+    }
+}

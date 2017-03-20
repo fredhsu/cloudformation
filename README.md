@@ -91,6 +91,7 @@ http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crosss
 ## Example run:
 
     aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/vpc-sg-igw.json --stack-name test13
+    aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lob1vpc.json --stack-name lob1
 
     aws cloudformation wait stack-create-complete
 
