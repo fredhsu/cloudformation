@@ -97,6 +97,18 @@ http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crosss
 
     aws cloudformation delete-stack --stack-name test13
 
+## Example with cross stack:
+    * Create VPC
+
+    $ aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lobvpc.json --stack-name lobvpc
+
+    * Create LOB1
+
+    $ aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lob1vpc.json --stack-name lob1
+
+    * Create LOB2
+    * Create TransitVPC
+
 ## Questions/Notes
 * How to integrate into CI/CD
 * Could have a CF template that deploys new version of app when build is done

@@ -76,7 +76,7 @@
             },
             "Export": {
                 "Name": {
-                    "Fn::Sub": "${AWS::StackName}-SecurityGroupID"
+                    "Fn::Sub": "${AWS::StackName}-VPCIGWSecurityGroupID"
                 }
             }
         },

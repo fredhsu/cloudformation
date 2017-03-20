@@ -1,222 +1,194 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "VPC with sg and igw",
+    "Description": "One LOB inside VPC with vrouter and subnets",
+    "Parameters": {
+        "VPCStackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "lobvpc"
+        }
+    },
     "Resources": {
-        "LOBVPC": {
-            "Type": "AWS::EC2::VPC",
-            "Properties": {
-                "CidrBlock": "10.2.0.0/16",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "lob-vpc-1"
-                    }
-                ]
-            }
-        },
-        "LOBSSHSg": {
-            "Type": "AWS::EC2::SecurityGroup",
-            "Properties": {
-                "GroupDescription": "Allow SSH",
-                "VpcId": {
-                    "Ref": "LOBVPC"
-                },
-                "SecurityGroupIngress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "0.0.0.0/0"
-                    }
-                ]
-            }
-        },
-        "LOB1Igw": {
-            "Type": "AWS::EC2::InternetGateway",
-            "Properties": {
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "lob-1-igw"
-                    }
-                ]
-            }
-        },
-        "LOB1AttachGateway": {
-            "Type": "AWS::EC2::VPCGatewayAttachment",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "LOBVPC"
-                },
-                "InternetGatewayId": {
-                    "Ref": "LOB1Igw"
-                }
-            }
-        },
-        "LOB1PublicSn": {
+        "LOB2PublicSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                        }
                 },
-                "CidrBlock": "10.2.1.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.2.3.0/24",
+                "AvailabilityZone": "us-west-2b",
                 "MapPublicIpOnLaunch": true,
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-public-subnet"
+                        "Value": "lob-2-public-subnet"
                     }
                 ]
             }
         },
-        "LOB1PublicRouteTable": {
+        "LOB2PublicRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-public-routetable"
+                        "Value": "lob-2-public-routetable"
                     }
                 ]
             }
         },
-        "LOB1InternetRoute": {
+        "LOB2InternetRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1AttachGateway",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1PublicRouteTable"
+                    "Ref": "LOB2PublicRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "GatewayId": {
-                    "Ref": "LOB1Igw"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCIGW"
+                        }
                 }
             }
         },
-        "LOB1PublicRouteTableAssociation": {
+        "LOB2PublicRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1PublicSn"
+                    "Ref": "LOB2PublicSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1PublicRouteTable"
+                    "Ref": "LOB2PublicRouteTable"
                 }
             }
         },
-        "LOB1WebRouteTable": {
+        "LOB2WebRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web-routetable"
+                        "Value": "lob-2-web-routetable"
                     }
                 ]
             }
         },
-        "LOB1WebDefaultRoute": {
+        "LOB2WebDefaultRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1WebNetworkInterfaceAttachment",
+            "DependsOn": "LOB2WebNetworkInterfaceAttachment",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1WebRouteTable"
+                    "Ref": "LOB2WebRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1WebIntf"
+                    "Ref": "LOB2WebIntf"
                 }
             }
         },
-        "LOB1WebRouteTableAssociation": {
+        "LOB2WebRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1WebSn"
+                    "Ref": "LOB2WebSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1WebRouteTable"
+                    "Ref": "LOB2WebRouteTable"
                 }
             }
         },
-        "LOB1AppRouteTable": {
+        "LOB2AppRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                        }
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app-routetable"
+                        "Value": "lob-2-app-routetable"
                     }
                 ]
             }
         },
-        "LOB1AppDefaultRoute": {
+        "LOB2AppDefaultRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1AppNetworkInterfaceAttachment",
+            "DependsOn": "LOB2AppNetworkInterfaceAttachment",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1AppRouteTable"
+                    "Ref": "LOB2AppRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1AppIntf"
+                    "Ref": "LOB2AppIntf"
                 }
             }
         },
-        "LOB1AppRouteTableAssociation": {
+        "LOB2AppRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1AppSn"
+                    "Ref": "LOB2AppSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1AppRouteTable"
+                    "Ref": "LOB2AppRouteTable"
                 }
             }
         },
-        "LOB1WebSn": {
+        "LOB2WebSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                        }
                 },
-                "CidrBlock": "10.2.11.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.2.21.0/24",
+                "AvailabilityZone": "us-west-2b",
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web-subnet"
+                        "Value": "lob-2-web-subnet"
                     }
                 ]
             }
         },
-        "LOB1AppSn": {
+        "LOB2AppSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCID"
+                        }
                 },
-                "CidrBlock": "10.2.12.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.2.22.0/24",
+                "AvailabilityZone": "us-west-2b",
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app-subnet"
+                        "Value": "lob-2-app-subnet"
                     }
                 ]
             }
         },
-        "LOB1vRouterInstance": {
+        "LOB2vRouterInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
@@ -225,7 +197,7 @@
                 "NetworkInterfaces": [
                     {
                         "NetworkInterfaceId": {
-                            "Ref": "LOB1MgmtIntf"
+                            "Ref": "LOB2MgmtIntf"
                         },
                         "DeviceIndex": "0"
                     }
@@ -233,7 +205,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-vrouter-1"
+                        "Value": "lob-vrouter-2"
                     }
                 ],
                 "UserData": {
@@ -241,25 +213,30 @@
                         "Fn::Join": [
                             "",
                             [
-                                "interface Ethernet 1\n",
-                                "description MGMT-Int_AND_To-Transit-VPC-1",
-                                "mtu 9001\n",
-                                "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.1.6/24\n",
-                                "\n",
+                                "username fredlhsu secret arista\n",
                                 "interface Ethernet 2\n",
                                 "description WEB-VRF\n",
                                 "mtu 9001\n",
                                 "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.11.6/24\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "LOB2WebIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "\n",
                                 "interface Ethernet 3\n",
                                 "description APP-VRF\n",
                                 "mtu 9001\n",
                                 "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.12.6/24\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "LOB2AppIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
                                 "\n"
                             ]
                         ]
@@ -267,66 +244,68 @@
                 }
             }
         },
-        "LOB1MgmtIntf": {
+        "LOB2MgmtIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1PublicSn"
+                    "Ref": "LOB2PublicSn"
                 },
                 "GroupSet": [
                     {
-                        "Ref": "LOBSSHSg"
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCIGWSecurityGroupID"
+                        }
                     }
                 ],
-                            "PrivateIpAddress": "10.2.1.6"
+                "PrivateIpAddress": "10.2.3.6"
             }
         },
-        "LOB1WebIntf": {
+        "LOB2WebIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1WebSn"
+                    "Ref": "LOB2WebSn"
                 },
-                "PrivateIpAddress": "10.2.11.6"
+                "PrivateIpAddress": "10.2.21.6"
             }
         },
-        "LOB1AppIntf": {
+        "LOB2AppIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1AppSn"
+                    "Ref": "LOB2AppSn"
                 },
-                "PrivateIpAddress": "10.2.12.6"
+                "PrivateIpAddress": "10.2.22.6"
             }
         },
-        "LOB1WebNetworkInterfaceAttachment": {
+        "LOB2WebNetworkInterfaceAttachment": {
             "Type": "AWS::EC2::NetworkInterfaceAttachment",
             "Properties": {
                 "InstanceId": {
-                    "Ref": "LOB1vRouterInstance"
+                    "Ref": "LOB2vRouterInstance"
                 },
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1WebIntf"
+                    "Ref": "LOB2WebIntf"
                 },
                 "DeviceIndex": "1"
             }
         },
-        "LOB1AppNetworkInterfaceAttachment": {
+        "LOB2AppNetworkInterfaceAttachment": {
             "Type": "AWS::EC2::NetworkInterfaceAttachment",
             "Properties": {
                 "InstanceId": {
-                    "Ref": "LOB1vRouterInstance"
+                    "Ref": "LOB2vRouterInstance"
                 },
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1AppIntf"
+                    "Ref": "LOB2AppIntf"
                 },
                 "DeviceIndex": "2"
             }
         },
-        "LOB1WebInstance": {
+        "LOB2WebInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
@@ -334,20 +313,22 @@
                 "InstanceType": "t2.micro",
                 "NetworkInterfaces": [
                     {
-                        "AssociatePublicIpAddress" : "true",
+                        "AssociatePublicIpAddress": "true",
                         "DeviceIndex": "0",
-                        "SubnetId" : { "Ref" : "LOB1WebSn"}
+                        "SubnetId": {
+                            "Ref": "LOB2WebSn"
+                        }
                     }
                 ],
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web"
+                        "Value": "lob-2-web"
                     }
                 ]
             }
         },
-        "LOB1AppInstance": {
+        "LOB2AppInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
@@ -355,44 +336,19 @@
                 "InstanceType": "t2.micro",
                 "NetworkInterfaces": [
                     {
-                        "AssociatePublicIpAddress" : "true",
+                        "AssociatePublicIpAddress": "true",
                         "DeviceIndex": "0",
-                        "SubnetId" : { "Ref" : "LOB1AppSn"}
+                        "SubnetId": {
+                            "Ref": "LOB2AppSn"
+                        }
                     }
                 ],
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app"
+                        "Value": "lob-2-app"
                     }
                 ]
-            }
-        }
-    },
-    "Outputs": {
-        "VPCId": {
-            "Description": "VPC ID",
-            "Value": {
-                "Ref": "LOBVPC"
-            },
-            "Export": {
-                "Name": {
-                    "Fn::Sub": "${AWS::StackName}-VPCID"
-                }
-            }
-        },
-        "vRouterSecurityGroup": {
-            "Description": "The security group ID to use for vrouter",
-            "Value": {
-                "Fn::GetAtt": [
-                    "LOBSSHSg",
-                    "GroupId"
-                ]
-            },
-            "Export": {
-                "Name": {
-                    "Fn::Sub": "${AWS::StackName}-SecurityGroupID"
-                }
             }
         }
     }
