@@ -1,25 +1,25 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "VPC with sg and igw",
+    "Description": "Transit VPC with all in one",
     "Resources": {
-        "LOBVPC": {
+        "TransitVPC": {
             "Type": "AWS::EC2::VPC",
             "Properties": {
-                "CidrBlock": "10.2.0.0/16",
+                "CidrBlock": "10.3.0.0/16",
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-vpc-1"
+                        "Value": "transit-vpc"
                     }
                 ]
             }
         },
-        "LOBSSHSg": {
+        "TransitVPCSecGrp": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
                 "GroupDescription": "Allow SSH",
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
                 "SecurityGroupIngress": [
                     {
@@ -31,201 +31,201 @@
                 ]
             }
         },
-        "LOB1Igw": {
+        "TransitIGW": {
             "Type": "AWS::EC2::InternetGateway",
             "Properties": {
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-igw"
+                        "Value": "transit-igw"
                     }
                 ]
             }
         },
-        "LOB1AttachGateway": {
+        "TransitAttachGateway": {
             "Type": "AWS::EC2::VPCGatewayAttachment",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
                 "InternetGatewayId": {
-                    "Ref": "LOB1Igw"
+                    "Ref": "TransitIGW"
                 }
             }
         },
-        "LOB1PublicSn": {
+        "TransitPublicSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                "CidrBlock": "10.2.1.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.3.1.0/24",
+                "AvailabilityZone": "us-west-2c",
                 "MapPublicIpOnLaunch": true,
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-public-subnet"
+                        "Value": "transit-public-subnet"
                     }
                 ]
             }
         },
-        "LOB1PublicRouteTable": {
+        "TransitPublicRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-public-routetable"
+                        "Value": "transit-public-routetable"
                     }
                 ]
             }
         },
-        "LOB1InternetRoute": {
+        "TransitInternetRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1AttachGateway",
+            "DependsOn": "TransitAttachGateway",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1PublicRouteTable"
+                    "Ref": "TransitPublicRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "GatewayId": {
-                    "Ref": "LOB1Igw"
+                    "Ref": "TransitIGW"
                 }
             }
         },
-        "LOB1PublicRouteTableAssociation": {
+        "TransitPublicRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1PublicSn"
+                    "Ref": "TransitPublicSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1PublicRouteTable"
+                    "Ref": "TransitPublicRouteTable"
                 }
             }
         },
-        "LOB1WebRouteTable": {
+        "TransitWebRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web-routetable"
+                        "Value": "Transit-web-routetable"
                     }
                 ]
             }
         },
-        "LOB1WebDefaultRoute": {
+        "TransitWebDefaultRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1WebNetworkInterfaceAttachment",
+            "DependsOn": "TransitWebNetworkInterfaceAttachment",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1WebRouteTable"
+                    "Ref": "TransitWebRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1WebIntf"
+                    "Ref": "TransitWebIntf"
                 }
             }
         },
-        "LOB1WebRouteTableAssociation": {
+        "TransitWebRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1WebSn"
+                    "Ref": "TransitWebSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1WebRouteTable"
+                    "Ref": "TransitWebRouteTable"
                 }
             }
         },
-        "LOB1AppRouteTable": {
+        "TransitAppRouteTable": {
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                 "Tags": [
+                "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app-routetable"
+                        "Value": "Transit-app-routetable"
                     }
                 ]
             }
         },
-        "LOB1AppDefaultRoute": {
+        "TransitAppDefaultRoute": {
             "Type": "AWS::EC2::Route",
-            "DependsOn": "LOB1AppNetworkInterfaceAttachment",
+            "DependsOn": "TransitAppNetworkInterfaceAttachment",
             "Properties": {
                 "RouteTableId": {
-                    "Ref": "LOB1AppRouteTable"
+                    "Ref": "TransitAppRouteTable"
                 },
                 "DestinationCidrBlock": "0.0.0.0/0",
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1AppIntf"
+                    "Ref": "TransitAppIntf"
                 }
             }
         },
-        "LOB1AppRouteTableAssociation": {
+        "TransitAppRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
                 "SubnetId": {
-                    "Ref": "LOB1AppSn"
+                    "Ref": "TransitAppSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB1AppRouteTable"
+                    "Ref": "TransitAppRouteTable"
                 }
             }
         },
-        "LOB1WebSn": {
+        "TransitWebSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                "CidrBlock": "10.2.11.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.3.11.0/24",
+                "AvailabilityZone": "us-west-2c",
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web-subnet"
+                        "Value": "Transit-web-subnet"
                     }
                 ]
             }
         },
-        "LOB1AppSn": {
+        "TransitAppSn": {
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                    "Ref": "LOBVPC"
+                    "Ref": "TransitVPC"
                 },
-                "CidrBlock": "10.2.12.0/24",
-                "AvailabilityZone": "us-west-2a",
+                "CidrBlock": "10.3.12.0/24",
+                "AvailabilityZone": "us-west-2c",
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app-subnet"
+                        "Value": "Transit-app-subnet"
                     }
                 ]
             }
         },
-        "LOB1vRouterInstance": {
+        "TransitvRouterInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
-                "ImageId": "ami-7f6fe31f",
+                "ImageId": "ami-ced641ae",
                 "InstanceType": "c4.large",
                 "NetworkInterfaces": [
                     {
                         "NetworkInterfaceId": {
-                            "Ref": "LOB1MgmtIntf"
+                            "Ref": "TransitMgmtIntf"
                         },
                         "DeviceIndex": "0"
                     }
@@ -233,7 +233,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-vrouter-1"
+                        "Value": "Transit-vrouter-1"
                     }
                 ],
                 "UserData": {
@@ -241,25 +241,30 @@
                         "Fn::Join": [
                             "",
                             [
-                                "interface Ethernet 1\n",
-                                "description MGMT-Int_AND_To-Transit-VPC-1",
-                                "mtu 9001\n",
-                                "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.1.6/24\n",
-                                "\n",
+                                "username fredlhsu secret arista\n",
                                 "interface Ethernet 2\n",
-                                "description WEB-VRF\n",
+                                "description Transit-WEB-VRF\n",
                                 "mtu 9001\n",
                                 "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.11.6/24\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "TransitWebIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "\n",
                                 "interface Ethernet 3\n",
-                                "description APP-VRF\n",
+                                "description Transit-APP-VRF\n",
                                 "mtu 9001\n",
                                 "no switchport\n",
-                                "! Could rework the following to ref the ip addresses\n",
-                                "ip address 10.2.12.6/24\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "TransitAppIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
                                 "\n"
                             ]
                         ]
@@ -267,66 +272,66 @@
                 }
             }
         },
-        "LOB1MgmtIntf": {
+        "TransitMgmtIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1PublicSn"
+                    "Ref": "TransitPublicSn"
                 },
                 "GroupSet": [
                     {
-                        "Ref": "LOBSSHSg"
+                        "Ref": "TransitVPCSecGrp"
                     }
                 ],
-                            "PrivateIpAddress": "10.2.1.6"
+                "PrivateIpAddress": "10.3.1.6"
             }
         },
-        "LOB1WebIntf": {
+        "TransitWebIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1WebSn"
+                    "Ref": "TransitWebSn"
                 },
-                "PrivateIpAddress": "10.2.11.6"
+                "PrivateIpAddress": "10.3.11.6"
             }
         },
-        "LOB1AppIntf": {
+        "TransitAppIntf": {
             "Type": "AWS::EC2::NetworkInterface",
             "Properties": {
                 "SourceDestCheck": false,
                 "SubnetId": {
-                    "Ref": "LOB1AppSn"
+                    "Ref": "TransitAppSn"
                 },
-                "PrivateIpAddress": "10.2.12.6"
+                "PrivateIpAddress": "10.3.12.6"
             }
         },
-        "LOB1WebNetworkInterfaceAttachment": {
+        "TransitWebNetworkInterfaceAttachment": {
             "Type": "AWS::EC2::NetworkInterfaceAttachment",
             "Properties": {
                 "InstanceId": {
-                    "Ref": "LOB1vRouterInstance"
+                    "Ref": "TransitvRouterInstance"
                 },
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1WebIntf"
+                    "Ref": "TransitWebIntf"
                 },
                 "DeviceIndex": "1"
             }
         },
-        "LOB1AppNetworkInterfaceAttachment": {
+        "TransitAppNetworkInterfaceAttachment": {
             "Type": "AWS::EC2::NetworkInterfaceAttachment",
             "Properties": {
                 "InstanceId": {
-                    "Ref": "LOB1vRouterInstance"
+                    "Ref": "TransitvRouterInstance"
                 },
                 "NetworkInterfaceId": {
-                    "Ref": "LOB1AppIntf"
+                    "Ref": "TransitAppIntf"
                 },
                 "DeviceIndex": "2"
             }
         },
-        "LOB1WebInstance": {
+        "TransitWebInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
@@ -334,20 +339,22 @@
                 "InstanceType": "t2.micro",
                 "NetworkInterfaces": [
                     {
-                        "AssociatePublicIpAddress" : "true",
+                        "AssociatePublicIpAddress": "true",
                         "DeviceIndex": "0",
-                        "SubnetId" : { "Ref" : "LOB1WebSn"}
+                        "SubnetId": {
+                            "Ref": "TransitWebSn"
+                        }
                     }
                 ],
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-web"
+                        "Value": "Transit-web"
                     }
                 ]
             }
         },
-        "LOB1AppInstance": {
+        "TransitAppInstance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
@@ -355,15 +362,17 @@
                 "InstanceType": "t2.micro",
                 "NetworkInterfaces": [
                     {
-                        "AssociatePublicIpAddress" : "true",
+                        "AssociatePublicIpAddress": "true",
                         "DeviceIndex": "0",
-                        "SubnetId" : { "Ref" : "LOB1AppSn"}
+                        "SubnetId": {
+                            "Ref": "TransitAppSn"
+                        }
                     }
                 ],
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "lob-1-app"
+                        "Value": "Transit-app"
                     }
                 ]
             }
@@ -373,7 +382,7 @@
         "VPCId": {
             "Description": "VPC ID",
             "Value": {
-                "Ref": "LOBVPC"
+                "Ref": "TransitVPC"
             },
             "Export": {
                 "Name": {
@@ -385,13 +394,24 @@
             "Description": "The security group ID to use for vrouter",
             "Value": {
                 "Fn::GetAtt": [
-                    "LOBSSHSg",
+                    "TransitVPCSecGrp",
                     "GroupId"
                 ]
             },
             "Export": {
                 "Name": {
                     "Fn::Sub": "${AWS::StackName}-SecurityGroupID"
+                }
+            }
+        },
+        "PublicRouteTableID": {
+            "Description": "Public Route Table ID",
+            "Value": {
+                "Ref": "TransitPublicRouteTable"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PublicRTID"
                 }
             }
         }

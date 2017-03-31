@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "One LOB inside VPC with vrouter and subnets",
+    "Description": "LOB 2 inside VPC with vrouter and subnets",
     "Parameters": {
         "VPCStackName": {
             "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
@@ -192,7 +192,7 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
-                "ImageId": "ami-7f6fe31f",
+                "ImageId": "ami-ced641ae",
                 "InstanceType": "c4.large",
                 "NetworkInterfaces": [
                     {
@@ -349,6 +349,19 @@
                         "Value": "lob-2-app"
                     }
                 ]
+            }
+        }
+    },
+    "Outputs": {
+        "PublicRouteTableID": {
+            "Description": "Public Route Table ID",
+            "Value": {
+                "Ref": "LOB2PublicRouteTable"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PublicRTID"
+                }
             }
         }
     }
