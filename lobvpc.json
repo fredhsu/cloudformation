@@ -31,6 +31,20 @@
                 ]
             }
         },
+        "LOBVPCPublicRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "LOBVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-vpc-1-public-routetable"
+                    }
+                ]
+            }
+        },
         "LOBIGW": {
             "Type": "AWS::EC2::InternetGateway",
             "Properties": {
@@ -52,6 +66,18 @@
                     "Ref": "LOBIGW"
                 }
             }
+        },
+        "LOBInternetRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "LOBVPCPublicRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "LOBIGW"
+                }
+            }
         }
     },
     "Outputs": {
@@ -63,6 +89,17 @@
             "Export": {
                 "Name": {
                     "Fn::Sub": "${AWS::StackName}-VPCID"
+                }
+            }
+        },
+        "VPCRouteTable": {
+            "Description": "Route Table for the public side of VPC",
+            "Value": {
+                "Ref": "LOBVPCPublicRouteTable"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPCRouteTableID"
                 }
             }
         },
@@ -80,8 +117,8 @@
                 }
             }
         },
-        "VPCIGW" : {
-            "Description" : "VPC Internet Gateway",
+        "VPCIGW": {
+            "Description": "VPC Internet Gateway",
             "Value": {
                 "Ref": "LOBIGW"
             },
@@ -91,6 +128,5 @@
                 }
             }
         }
-    
     }
 }

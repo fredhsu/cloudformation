@@ -32,39 +32,50 @@
             "MinLength": 1,
             "MaxLength": 255,
             "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
-            "Default": "transitvpc"
+            "Default": "transit"
         }
-        // Need to grab the route table IDs of the public route tables
     },
     "Resources": {
-        "myVPCPeeringConnection": {
+        "VPCPeeringConnection": {
             "Type": "AWS::EC2::VPCPeeringConnection",
             "Properties": {
                 "VpcId": {
-                    "Fn::ImportValue" : {
+                    "Fn::ImportValue": {
                         "Fn::Sub": "${LOBVPCStackName}-VPCID"
-                        }
+                    }
                 },
                 "PeerVpcId": {
-                    "Fn::ImportValue" : {
-                        "Fn::Sub" : "${TransitVPCStackName}-VPCID" 
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TransitVPCStackName}-VPCID"
                     }
                 }
             }
         },
-        // Create routes in the route tables of the VPCs to point to the peer link
-        "LOB1TransitRoute": {
+        "LOBTransitRoute": {
             "Type": "AWS::EC2::Route",
             "Properties": {
                 "RouteTableId": {
                     "Fn::ImportValue": {
-                        "Fn::Sub": "${LOB1StackName}-PublicRTID"
+                        "Fn::Sub": "${LOBVPCStackName}-VPCRouteTableID"
                     }
                 },
                 "DestinationCidrBlock": "10.3.0.0/16",
-                "GatewayId": {
-                    "Ref" : "myVPCPeeringConnection"
-                    // "Fn::GetAtt": [ "LOBSSHSecGrp", "GroupId" ]
+                "VpcPeeringConnectionId": {
+                    "Ref": "VPCPeeringConnection"
+                }
+            }
+        },
+        "TransitLOBRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TransitVPCStackName}-PublicRTID"
+                    }
+                },
+                "DestinationCidrBlock": "10.2.0.0/16",
+                "VpcPeeringConnectionId": {
+                    "Ref": "VPCPeeringConnection"
                 }
             }
         }

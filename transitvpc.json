@@ -241,6 +241,7 @@
                         "Fn::Join": [
                             "",
                             [
+                                "%EOS-STARTUP-CONFIG-START%\n",
                                 "username fredlhsu secret arista\n",
                                 "interface Ethernet 2\n",
                                 "description Transit-WEB-VRF\n",
@@ -253,7 +254,7 @@
                                         "PrimaryPrivateIpAddress"
                                     ]
                                 },
-                                "\n",
+                                "/24\n",
                                 "interface Ethernet 3\n",
                                 "description Transit-APP-VRF\n",
                                 "mtu 9001\n",
@@ -265,7 +266,28 @@
                                         "PrimaryPrivateIpAddress"
                                     ]
                                 },
-                                "\n"
+                                "/24\n",
+                                "%EOS-STARTUP-CONFIG-END%\n",
+                                "%AWS-CONFIG-START%\n",
+                                "[plugins]\n",
+                                "cwlogs = cwlogs\n",
+                                "[default]\n",
+                                "region = us-west-2\n",
+                                "%AWS-CONFIG-END%\n",
+                                "\n",
+                                "%AWSLOGS-CONFIG-START%\n",
+                                "[general]\n",
+                                "# Path to the CloudWatch Logs agent's state file. The agent uses this file to maintain\n",
+                                "# client side state across its executions.\n",
+                                "state_file = /var/awslogs/state/agent-state\n",
+                                "[/var/log/messages]\n",
+                                "datetime_format = %b %d %H:%M:%S\n",
+                                "file = /var/log/messages\n",
+                                "buffer_duration = 5000\n",
+                                "log_group_name = veoslogs\n",
+                                "log_stream_name = {hostname}\n",
+                                "initial_position = start_of_file\n",
+                                "%AWSLOGS-CONFIG-END%\n"
                             ]
                         ]
                     }

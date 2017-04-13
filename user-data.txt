@@ -1,0 +1,61 @@
+%EOS-STARTUP-CONFIG-START%
+
+%EOS-STARTUP-CONFIG-END%
+
+%AWS-CONFIG-START%
+[plugins]
+cwlogs = cwlogs
+[default]
+region = us-west-1
+%AWS-CONFIG-END%
+
+%AWSLOGS-CONFIG-START%
+[general]
+# Path to the CloudWatch Logs agent's state file. The agent uses this file to maintain
+# client side state across its executions.
+state_file = /var/awslogs/state/agent-state
+[/var/log/messages]
+datetime_format = %b %d %H:%M:%S
+file = /var/log/messages
+buffer_duration = 5000
+log_group_name = veoslogs
+log_stream_name = {hostname}
+initial_position = start_of_file
+%AWSLOGS-CONFIG-END%
+
+%AWS-PROXY-START%
+HTTP_PROXY=http://10.3.255.155:8888
+HTTPS_PROXY=https://10.3.255.155:8888
+NO_PROXY=169.254.169.254
+%AWS-PROXY-END%
+
+%AWSHA-CONFIG-START%
+{
+        "Aws": {
+                "Encryption": "0",
+                "Region": "us-west-1",
+                "HTTPS_PROXY": "10.3.255.155",
+                "HTTPS_PORT": "8888",
+                "HTTP_PROXY": "10.3.255.155",
+                "HTTP_PORT": "8887",
+                "NO_PROXY": "169.254.169.254"
+        },
+        "AwsRouter": {
+                "rtb-1234": {
+                        "Routetables": ["0.0.0.0/0"],
+                        "PrimaryNetIntID": "eni-1234",
+                        "BackupNetIntID": "eni-4321"
+                },
+                "rtb-5678": {
+                        "Routetables": ["0.0.0.0/0"],
+                        "PrimaryNetIntID": "eni-5678",
+                        "BackupNetIntID": "eni-8765"
+                },
+                "rtb-abcd": {
+                        "Routetables": ["0.0.0.0/0"],
+                        "PrimaryNetIntID": "eni-abcd",
+                        "BackupNetIntID": "eni-dcba"
+                }
+        }
+}
+%AWSHA-CONFIG-END%

@@ -16,9 +16,9 @@
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
-                        }
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
                 "CidrBlock": "10.2.3.0/24",
                 "AvailabilityZone": "us-west-2b",
@@ -31,36 +31,6 @@
                 ]
             }
         },
-        "LOB2PublicRouteTable": {
-            "Type": "AWS::EC2::RouteTable",
-            "Properties": {
-                "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
-                    }
-                },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "lob-2-public-routetable"
-                    }
-                ]
-            }
-        },
-        "LOB2InternetRoute": {
-            "Type": "AWS::EC2::Route",
-            "Properties": {
-                "RouteTableId": {
-                    "Ref": "LOB2PublicRouteTable"
-                },
-                "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCIGW"
-                        }
-                }
-            }
-        },
         "LOB2PublicRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
@@ -68,7 +38,9 @@
                     "Ref": "LOB2PublicSn"
                 },
                 "RouteTableId": {
-                    "Ref": "LOB2PublicRouteTable"
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCRouteTableID"
+                    }
                 }
             }
         },
@@ -76,8 +48,8 @@
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
                     }
                 },
                 "Tags": [
@@ -116,9 +88,9 @@
             "Type": "AWS::EC2::RouteTable",
             "Properties": {
                 "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
-                        }
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
                 "Tags": [
                     {
@@ -156,9 +128,9 @@
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
-                        }
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
                 "CidrBlock": "10.2.21.0/24",
                 "AvailabilityZone": "us-west-2b",
@@ -174,9 +146,9 @@
             "Type": "AWS::EC2::Subnet",
             "Properties": {
                 "VpcId": {
-                        "Fn::ImportValue": {
-                            "Fn::Sub": "${VPCStackName}-VPCID"
-                        }
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
                 },
                 "CidrBlock": "10.2.22.0/24",
                 "AvailabilityZone": "us-west-2b",
@@ -213,6 +185,7 @@
                         "Fn::Join": [
                             "",
                             [
+                                "%EOS-STARTUP-CONFIG-START%\n",
                                 "username fredlhsu secret arista\n",
                                 "interface Ethernet 2\n",
                                 "description WEB-VRF\n",
@@ -225,7 +198,7 @@
                                         "PrimaryPrivateIpAddress"
                                     ]
                                 },
-                                "\n",
+                                "/24\n",
                                 "interface Ethernet 3\n",
                                 "description APP-VRF\n",
                                 "mtu 9001\n",
@@ -237,7 +210,28 @@
                                         "PrimaryPrivateIpAddress"
                                     ]
                                 },
-                                "\n"
+                                "/24\n",
+                                "%EOS-STARTUP-CONFIG-END%\n",
+                                "%AWS-CONFIG-START%\n",
+                                "[plugins]\n",
+                                "cwlogs = cwlogs\n",
+                                "[default]\n",
+                                "region = us-west-2\n",
+                                "%AWS-CONFIG-END%\n",
+                                "\n",
+                                "%AWSLOGS-CONFIG-START%\n",
+                                "[general]\n",
+                                "# Path to the CloudWatch Logs agent's state file. The agent uses this file to maintain\n",
+                                "# client side state across its executions.\n",
+                                "state_file = /var/awslogs/state/agent-state\n",
+                                "[/var/log/messages]\n",
+                                "datetime_format = %b %d %H:%M:%S\n",
+                                "file = /var/log/messages\n",
+                                "buffer_duration = 5000\n",
+                                "log_group_name = veoslogs\n",
+                                "log_stream_name = {hostname}\n",
+                                "initial_position = start_of_file\n",
+                                "%AWSLOGS-CONFIG-END%\n"
                             ]
                         ]
                     }
@@ -349,19 +343,6 @@
                         "Value": "lob-2-app"
                     }
                 ]
-            }
-        }
-    },
-    "Outputs": {
-        "PublicRouteTableID": {
-            "Description": "Public Route Table ID",
-            "Value": {
-                "Ref": "LOB2PublicRouteTable"
-            },
-            "Export": {
-                "Name": {
-                    "Fn::Sub": "${AWS::StackName}-PublicRTID"
-                }
             }
         }
     }

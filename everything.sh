@@ -9,4 +9,8 @@ aws cloudformation wait stack-create-complete --stack-name lobvpc
 aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lob1vpc.json --stack-name lob1
 # Create lob2
 aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lob2.json --stack-name lob2
+# Wait for transit VPC
+aws cloudformation wait stack-create-complete --stack-name transit
 # Create VPC Peer
+aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/vpcpeer.json --stack-name peer
+
