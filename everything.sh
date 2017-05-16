@@ -1,3 +1,4 @@
+AWS_DEFAULT_PROFILE=arista
 # Create LOB VPC
 aws cloudformation create-stack --template-body file:///$HOME/code/aws/cloudformation/lobvpc.json --stack-name lobvpc
 # Create Transit VPC
