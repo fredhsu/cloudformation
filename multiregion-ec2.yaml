@@ -1,0 +1,57 @@
+Mappings: 
+    # AMI Mappings per region
+    RegionMap: 
+        us-east-2: 
+            "64": "ami-4191b524"
+        us-west-2: 
+            "64": "ami-4836a428"
+        eu-west-1: 
+            "64": "ami-01ccc867"
+        ap-southeast-2: 
+            "64": "ami-162c2575"
+        ap-northeast-1: 
+            "64": "ami-923d12f5"
+    # Private Keys per region
+    KeyMap:
+        us-east-2: 
+            "0": "us-east-2-demo"
+        us-west-2: 
+            "0": "us-west-2-demo"
+        eu-west-1: 
+            "0": "eu-west-1-demo"
+        ap-southeast-2: 
+            "0": "ap-se-2-demo"
+        ap-northeast-1: 
+            "0": "ap-ne-1-demo"
+Resources:
+    Ec2Instance:
+        Type: AWS::EC2::Instance
+        Properties: 
+            SecurityGroups:
+            - Ref: InstanceSecurityGroup
+            KeyName: !FindInMap [ KeyMap, !Ref "AWS::Region", 0 ]
+            ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", 64 ]
+            InstanceType: t2.micro
+            Tags:
+            -
+                Key: Name
+                Value: "CloudTracer - Fred"
+        # Need to add script to install webserver and start it
+    InstanceSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Enable SSH, HTTP, ICMP
+            SecurityGroupIngress:
+            - IpProtocol: tcp
+              FromPort: '22'
+              ToPort: '22'
+              CidrIp: 0.0.0.0/0
+            - IpProtocol: tcp
+              FromPort: '80'
+              ToPort: '80'
+              CidrIp: 0.0.0.0/0
+            - IpProtocol: icmp
+              FromPort: '-1'
+              ToPort: '-1'
+              CidrIp: 0.0.0.0/0
+# Get output of the IP address of the VM
