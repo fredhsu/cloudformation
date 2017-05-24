@@ -71,6 +71,13 @@ When I got this error it would rollback and remove everything it created
 * Need to grab the private IP of the interfaces and assign that to the config of the switch
 * Apply the config to the image as part of bootup
 
+## multiregion-ec2.yaml and multiregion.sh
+* Trying to make things work for multi-region deployments
+* Using a shell script to run aws cli across multiple regions since CF template is region specific
+* Using Maps in CF script to provide region specific attributes
+* Using YAML instead of JSON
+* TODO: add user-data to boot a web server
+* TODO: export the IP addresses of the EC2 instances started up
 
 ## plus use ElasticIP
 ## Add EC2 to second AZ
