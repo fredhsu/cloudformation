@@ -1,0 +1,395 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Transit VPC with all in one",
+    "Resources": {
+        "TransitVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.3.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "transit-vpc"
+                    }
+                ]
+            }
+        },
+        "TransitVPCSecGrp": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow SSH",
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "TransitIGW": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "transit-igw"
+                    }
+                ]
+            }
+        },
+        "TransitAttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "TransitIGW"
+                }
+            }
+        },
+        "TransitPublicSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "CidrBlock": "10.3.1.0/24",
+                "AvailabilityZone": "us-west-2c",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "transit-public-subnet"
+                    }
+                ]
+            }
+        },
+        "TransitPublicRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "transit-public-routetable"
+                    }
+                ]
+            }
+        },
+        "TransitInternetRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "TransitAttachGateway",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "TransitPublicRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "TransitIGW"
+                }
+            }
+        },
+        "TransitPublicRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "TransitPublicSn"
+                },
+                "RouteTableId": {
+                    "Ref": "TransitPublicRouteTable"
+                }
+            }
+        },
+        "TransitWebRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-web-routetable"
+                    }
+                ]
+            }
+        },
+        "TransitWebDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "TransitWebNetworkInterfaceAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "TransitWebRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "TransitWebIntf"
+                }
+            }
+        },
+        "TransitWebRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "TransitWebSn"
+                },
+                "RouteTableId": {
+                    "Ref": "TransitWebRouteTable"
+                }
+            }
+        },
+        "TransitAppRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-app-routetable"
+                    }
+                ]
+            }
+        },
+        "TransitAppDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "TransitAppNetworkInterfaceAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "TransitAppRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "TransitAppIntf"
+                }
+            }
+        },
+        "TransitAppRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "TransitAppSn"
+                },
+                "RouteTableId": {
+                    "Ref": "TransitAppRouteTable"
+                }
+            }
+        },
+        "TransitWebSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "CidrBlock": "10.3.11.0/24",
+                "AvailabilityZone": "us-west-2c",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-web-subnet"
+                    }
+                ]
+            }
+        },
+        "TransitAppSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "TransitVPC"
+                },
+                "CidrBlock": "10.3.12.0/24",
+                "AvailabilityZone": "us-west-2c",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-app-subnet"
+                    }
+                ]
+            }
+        },
+        "TransitvRouterInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-c10d1cb8",
+                "InstanceType": "c4.large",
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "TransitMgmtIntf"
+                        },
+                        "DeviceIndex": "0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-vrouter-1"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "%EOS-STARTUP-CONFIG-START%\n",
+                                "username fredlhsu secret arista\n",
+                                "interface Ethernet 2\n",
+                                "description Transit-WEB-VRF\n",
+                                "mtu 9001\n",
+                                "no switchport\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "TransitWebIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "/24\n",
+                                "interface Ethernet 3\n",
+                                "description Transit-APP-VRF\n",
+                                "mtu 9001\n",
+                                "no switchport\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "TransitAppIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "/24\n",
+                                "%EOS-STARTUP-CONFIG-END%\n",
+                                "%AWS-CONFIG-START%\n",
+                                "[plugins]\n",
+                                "cwlogs = cwlogs\n",
+                                "[default]\n",
+                                "region = us-west-2\n",
+                                "%AWS-CONFIG-END%\n",
+                                "\n",
+                                "%AWSLOGS-CONFIG-START%\n",
+                                "[general]\n",
+                                "# Path to the CloudWatch Logs agent's state file. The agent uses this file to maintain\n",
+                                "# client side state across its executions.\n",
+                                "state_file = /var/awslogs/state/agent-state\n",
+                                "[/var/log/messages]\n",
+                                "datetime_format = %b %d %H:%M:%S\n",
+                                "file = /var/log/messages\n",
+                                "buffer_duration = 5000\n",
+                                "log_group_name = veoslogs\n",
+                                "log_stream_name = {hostname}\n",
+                                "initial_position = start_of_file\n",
+                                "%AWSLOGS-CONFIG-END%\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "TransitMgmtIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "TransitPublicSn"
+                },
+                "GroupSet": [
+                    {
+                        "Ref": "TransitVPCSecGrp"
+                    }
+                ],
+                "PrivateIpAddress": "10.3.1.6"
+            }
+        },
+        "TransitWebIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "TransitWebSn"
+                },
+                "PrivateIpAddress": "10.3.11.6"
+            }
+        },
+        "TransitAppIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "TransitAppSn"
+                },
+                "PrivateIpAddress": "10.3.12.6"
+            }
+        },
+        "TransitWebNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "TransitvRouterInstance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "TransitWebIntf"
+                },
+                "DeviceIndex": "1"
+            }
+        },
+        "TransitAppNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "TransitvRouterInstance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "TransitAppIntf"
+                },
+                "DeviceIndex": "2"
+            }
+        }
+    },
+    "Outputs": {
+        "VPCId": {
+            "Description": "VPC ID",
+            "Value": {
+                "Ref": "TransitVPC"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPCID"
+                }
+            }
+        },
+        "vRouterSecurityGroup": {
+            "Description": "The security group ID to use for vrouter",
+            "Value": {
+                "Fn::GetAtt": [
+                    "TransitVPCSecGrp",
+                    "GroupId"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SecurityGroupID"
+                }
+            }
+        },
+        "PublicRouteTableID": {
+            "Description": "Public Route Table ID",
+            "Value": {
+                "Ref": "TransitPublicRouteTable"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PublicRTID"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,349 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "LOB 1 inside VPC with vrouter and subnets",
+    "Parameters": {
+        "VPCStackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "lobvpc"
+        }
+    },
+    "Resources": {
+        "LOB1PublicSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
+                },
+                "CidrBlock": "10.2.1.0/24",
+                "AvailabilityZone": "us-west-2a",
+                "MapPublicIpOnLaunch": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-public-subnet"
+                    }
+                ]
+            }
+        },
+        "LOB1PublicRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "LOB1PublicSn"
+                },
+                "RouteTableId": {
+                    "Fn::ImportValue" :{
+                        "Fn::Sub" : "${VPCStackName}-VPCRouteTableID"
+                    }
+                }
+            }
+        },
+        "LOB1WebRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-web-routetable"
+                    }
+                ]
+            }
+        },
+        "LOB1WebDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "LOB1WebNetworkInterfaceAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "LOB1WebRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "LOB1WebIntf"
+                }
+            }
+        },
+        "LOB1WebRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "LOB1WebSn"
+                },
+                "RouteTableId": {
+                    "Ref": "LOB1WebRouteTable"
+                }
+            }
+        },
+        "LOB1AppRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-app-routetable"
+                    }
+                ]
+            }
+        },
+        "LOB1AppDefaultRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "LOB1AppNetworkInterfaceAttachment",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "LOB1AppRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NetworkInterfaceId": {
+                    "Ref": "LOB1AppIntf"
+                }
+            }
+        },
+        "LOB1AppRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "LOB1AppSn"
+                },
+                "RouteTableId": {
+                    "Ref": "LOB1AppRouteTable"
+                }
+            }
+        },
+        "LOB1WebSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
+                },
+                "CidrBlock": "10.2.11.0/24",
+                "AvailabilityZone": "us-west-2a",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-web-subnet"
+                    }
+                ]
+            }
+        },
+        "LOB1AppSn": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${VPCStackName}-VPCID"
+                    }
+                },
+                "CidrBlock": "10.2.12.0/24",
+                "AvailabilityZone": "us-west-2a",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-app-subnet"
+                    }
+                ]
+            }
+        },
+        "LOB1vRouterInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-c10d1cb8",
+                "InstanceType": "c4.large",
+                "NetworkInterfaces": [
+                    {
+                        "NetworkInterfaceId": {
+                            "Ref": "LOB1MgmtIntf"
+                        },
+                        "DeviceIndex": "0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-vrouter-1"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "%EOS-STARTUP-CONFIG-START%\n",
+                                "username fredlhsu secret arista\n",
+                                "interface Ethernet 2\n",
+                                "description WEB-VRF\n",
+                                "mtu 9001\n",
+                                "no switchport\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "LOB1WebIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "/24\n",
+                                "interface Ethernet 3\n",
+                                "description APP-VRF\n",
+                                "mtu 9001\n",
+                                "no switchport\n",
+                                "ip address ",
+                                {
+                                    "Fn::GetAtt": [
+                                        "LOB1AppIntf",
+                                        "PrimaryPrivateIpAddress"
+                                    ]
+                                },
+                                "/24\n",
+                                "%EOS-STARTUP-CONFIG-END%\n",
+                                "%AWS-CONFIG-START%\n",
+                                "[plugins]\n",
+                                "cwlogs = cwlogs\n",
+                                "[default]\n",
+                                "region = us-west-2\n",
+                                "%AWS-CONFIG-END%\n",
+                                "\n",
+                                "%AWSLOGS-CONFIG-START%\n",
+                                "[general]\n",
+                                "# Path to the CloudWatch Logs agent's state file. The agent uses this file to maintain\n",
+                                "# client side state across its executions.\n",
+                                "state_file = /var/awslogs/state/agent-state\n",
+                                "[/var/log/messages]\n",
+                                "datetime_format = %b %d %H:%M:%S\n",
+                                "file = /var/log/messages\n",
+                                "buffer_duration = 5000\n",
+                                "log_group_name = veoslogs\n",
+                                "log_stream_name = {hostname}\n",
+                                "initial_position = start_of_file\n",
+                                "%AWSLOGS-CONFIG-END%\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "LOB1MgmtIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "LOB1PublicSn"
+                },
+                "GroupSet": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${VPCStackName}-VPCIGWSecurityGroupID"
+                        }
+                    }
+                ],
+                "PrivateIpAddress": "10.2.1.6"
+            }
+        },
+        "LOB1WebIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "LOB1WebSn"
+                },
+                "PrivateIpAddress": "10.2.11.6"
+            }
+        },
+        "LOB1AppIntf": {
+            "Type": "AWS::EC2::NetworkInterface",
+            "Properties": {
+                "SourceDestCheck": false,
+                "SubnetId": {
+                    "Ref": "LOB1AppSn"
+                },
+                "PrivateIpAddress": "10.2.12.6"
+            }
+        },
+        "LOB1WebNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "LOB1vRouterInstance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "LOB1WebIntf"
+                },
+                "DeviceIndex": "1"
+            }
+        },
+        "LOB1AppNetworkInterfaceAttachment": {
+            "Type": "AWS::EC2::NetworkInterfaceAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "LOB1vRouterInstance"
+                },
+                "NetworkInterfaceId": {
+                    "Ref": "LOB1AppIntf"
+                },
+                "DeviceIndex": "2"
+            }
+        },
+        "LOB1WebInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-c10d1cb8",
+                "InstanceType": "t2.micro",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "SubnetId": {
+                            "Ref": "LOB1WebSn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-web"
+                    }
+                ]
+            }
+        },
+        "LOB1AppInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-c10d1cb8",
+                "InstanceType": "t2.micro",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "SubnetId": {
+                            "Ref": "LOB1AppSn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "lob-1-app"
+                    }
+                ]
+            }
+        }
+    }
+}

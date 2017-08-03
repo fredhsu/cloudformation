@@ -1,0 +1,83 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC Peering between Transit and LOB",
+    "Parameters": {
+        "LOBVPCStackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "lobvpc"
+        },
+        "LOB1StackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "lob1"
+        },
+        "LOB2StackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "lob2"
+        },
+        "TransitVPCStackName": {
+            "Description": "Name of an active CloudFormation stack that contains the VPC resources that will be used in this stack.",
+            "Type": "String",
+            "MinLength": 1,
+            "MaxLength": 255,
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Default": "transit"
+        }
+    },
+    "Resources": {
+        "VPCPeeringConnection": {
+            "Type": "AWS::EC2::VPCPeeringConnection",
+            "Properties": {
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${LOBVPCStackName}-VPCID"
+                    }
+                },
+                "PeerVpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TransitVPCStackName}-VPCID"
+                    }
+                }
+            }
+        },
+        "LOBTransitRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${LOBVPCStackName}-VPCRouteTableID"
+                    }
+                },
+                "DestinationCidrBlock": "10.3.0.0/16",
+                "VpcPeeringConnectionId": {
+                    "Ref": "VPCPeeringConnection"
+                }
+            }
+        },
+        "TransitLOBRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TransitVPCStackName}-PublicRTID"
+                    }
+                },
+                "DestinationCidrBlock": "10.2.0.0/16",
+                "VpcPeeringConnectionId": {
+                    "Ref": "VPCPeeringConnection"
+                }
+            }
+        }
+    }
+}
