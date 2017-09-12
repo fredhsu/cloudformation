@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with sg and igw
+Resources:
+  demovpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.2.0.0/16
+      Tags:
+        - Key: Name
+          Value: demovpc
+  sshsg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH
+      VpcId: !Ref 'demovpc'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '500'
+          ToPort: '500'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '4500'
+          ToPort: '4500'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: '50'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: '51'
+          CidrIp: 0.0.0.0/0
+  demovpcigw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: launchdemo-igw
+  AttachGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'demovpc'
+      InternetGatewayId: !Ref 'demovpcigw'
+  snoutwest2a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'demovpc'
+      CidrBlock: 10.2.1.0/24
+      AvailabilityZone: us-west-2a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: subnet-out-west2a
+  publicRouteTableWest2a:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'demovpc'
+      Tags:
+        - Key: Name
+          Value: launchdemo-rt-west2a      
+  publicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGW
+    Properties:
+      RouteTableId: !Ref 'publicRouteTableWest2a'
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'demovpcigw'
+  PublicRTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref snoutwest2a
+      RouteTableId: !Ref publicRouteTableWest2a    
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: labvpc
+      ImageId: ami-4fbb5837
+      InstanceType: c4.large
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref 'MgmtIntf'
+          DeviceIndex: '0'
+      UserData:
+        Fn::Base64: "%EOS-STARTUP-CONFIG-START%\nusername cvpadmin secret arista123\nmanagement api http-commands\nno shut\n%EOS-STARTUP-CONFIG-END%\n"
+        # Add Sub! and insert a loopback with public IP address
+        # !GetAtt Ec2Instance.PublicIp
+      Tags:
+        - Key: Name
+          Value: veos-launchdemo-west2a
+        - Key: User
+          Value: fredlhsu
+  MgmtIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'snoutwest2a'
+      GroupSet:
+        - !Ref 'sshsg'
+      Tags:
+        - Key: Name
+          Value: launchdemo-mgmtintf

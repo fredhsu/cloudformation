@@ -220,7 +220,7 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": "vrouter-demo",
-                "ImageId": "ami-c10d1cb8",
+                "ImageId": "ami-ced641ae",
                 "InstanceType": "c4.large",
                 "NetworkInterfaces": [
                     {
@@ -351,6 +351,52 @@
                     "Ref": "TransitAppIntf"
                 },
                 "DeviceIndex": "2"
+            }
+        },
+        "TransitWebInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-f173cc91",
+                "InstanceType": "t2.micro",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "SubnetId": {
+                            "Ref": "TransitWebSn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-web"
+                    }
+                ]
+            }
+        },
+        "TransitAppInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": "vrouter-demo",
+                "ImageId": "ami-f173cc91",
+                "InstanceType": "t2.micro",
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "SubnetId": {
+                            "Ref": "TransitAppSn"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Transit-app"
+                    }
+                ]
             }
         }
     },

@@ -32,6 +32,8 @@ Resources:
             KeyName: !FindInMap [ KeyMap, !Ref "AWS::Region", 0 ]
             ImageId: !FindInMap [ RegionMap, !Ref "AWS::Region", 64 ]
             InstanceType: t2.micro
+            UserData: !Base64 
+                        "Fn::Join": ["", ["#!/bin/bash\n","yum install -y httpd\n", "service httpd start\n"]]
             Tags:
             -
                 Key: Name
@@ -55,3 +57,11 @@ Resources:
               ToPort: '-1'
               CidrIp: 0.0.0.0/0
 # Get output of the IP address of the VM
+
+Outputs:
+    Ec2IP:
+        Description: EC2 IP Address
+        Value: !GetAtt Ec2Instance.PublicIp
+    EcID:
+        Description: EC2 ID
+        Value: !Ref Ec2Instance

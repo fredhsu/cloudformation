@@ -76,8 +76,13 @@ When I got this error it would rollback and remove everything it created
 * Using a shell script to run aws cli across multiple regions since CF template is region specific
 * Using Maps in CF script to provide region specific attributes
 * Using YAML instead of JSON
-* TODO: add user-data to boot a web server
-* TODO: export the IP addresses of the EC2 instances started up
+* use `deletemulti.sh` to remove them
+* user-data used to boot a web server
+* IP addresses of the EC2 instances is printed in output.
+    * View with `aws cloudformation describe-stacks`
+
+## singlevpn.yaml singlevpn-existingvpc.yaml
+Creation of a single VPN device, either creating the VPC and IGW or inserting into an existing one
 
 ## plus use ElasticIP
 ## Add EC2 to second AZ

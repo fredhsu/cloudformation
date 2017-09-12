@@ -1,0 +1,267 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: LOB 1 inside VPC with vrouter and subnets
+Parameters:
+  VPCStackName:
+    Description: Name of an active CloudFormation stack that contains the VPC resources
+      that will be used in this stack.
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    Default: lobvpc
+Resources:
+  LOB1PublicSn:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCID
+      CidrBlock: 10.2.1.0/24
+      AvailabilityZone: us-west-2a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: lob-1-public-subnet
+  LOB1PublicRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'LOB1PublicSn'
+      RouteTableId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCRouteTableID
+  LOB1WebRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCID
+      Tags:
+        - Key: Name
+          Value: lob-1-web-routetable
+  LOB1WebDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: LOB1WebNetworkInterfaceAttachment
+    Properties:
+      RouteTableId: !Ref 'LOB1WebRouteTable'
+      DestinationCidrBlock: 0.0.0.0/0
+      NetworkInterfaceId: !Ref 'LOB1WebIntf'
+  LOB1WebRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'LOB1WebSn'
+      RouteTableId: !Ref 'LOB1WebRouteTable'
+  LOB1AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCID
+      Tags:
+        - Key: Name
+          Value: lob-1-app-routetable
+  LOB1AppDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: LOB1AppNetworkInterfaceAttachment
+    Properties:
+      RouteTableId: !Ref 'LOB1AppRouteTable'
+      DestinationCidrBlock: 0.0.0.0/0
+      NetworkInterfaceId: !Ref 'LOB1AppIntf'
+  LOB1AppRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'LOB1AppSn'
+      RouteTableId: !Ref 'LOB1AppRouteTable'
+  LOB1WebSn:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCID
+      CidrBlock: 10.2.11.0/24
+      AvailabilityZone: us-west-2a
+      Tags:
+        - Key: Name
+          Value: lob-1-web-subnet
+  LOB1AppSn:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !ImportValue
+        Fn::Sub: ${VPCStackName}-VPCID
+      CidrBlock: 10.2.12.0/24
+      AvailabilityZone: us-west-2a
+      Tags:
+        - Key: Name
+          Value: lob-1-app-subnet
+  LOB1vRouterInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: vrouter-demo
+      ImageId: ami-c10d1cb8
+      InstanceType: c4.large
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref 'LOB1MgmtIntf'
+          DeviceIndex: '0'
+      Tags:
+        - Key: Name
+          Value: lob-vrouter-1
+      UserData: !Base64
+        Fn::Join:
+          - ''
+          - - '%EOS-STARTUP-CONFIG-START%
+
+              '
+            - 'username fredlhsu secret arista
+
+              '
+            - 'interface Ethernet 2
+
+              '
+            - 'description WEB-VRF
+
+              '
+            - 'mtu 9001
+
+              '
+            - 'no switchport
+
+              '
+            - 'ip address '
+            - !GetAtt 'LOB1WebIntf.PrimaryPrivateIpAddress'
+            - '/24
+
+              '
+            - 'interface Ethernet 3
+
+              '
+            - 'description APP-VRF
+
+              '
+            - 'mtu 9001
+
+              '
+            - 'no switchport
+
+              '
+            - 'ip address '
+            - !GetAtt 'LOB1AppIntf.PrimaryPrivateIpAddress'
+            - '/24
+
+              '
+            - '%EOS-STARTUP-CONFIG-END%
+
+              '
+            - '%AWS-CONFIG-START%
+
+              '
+            - '[plugins]
+
+              '
+            - 'cwlogs = cwlogs
+
+              '
+            - '[default]
+
+              '
+            - 'region = us-west-2
+
+              '
+            - '%AWS-CONFIG-END%
+
+              '
+            - '
+
+              '
+            - '%AWSLOGS-CONFIG-START%
+
+              '
+            - '[general]
+
+              '
+            - '# Path to the CloudWatch Logs agent''s state file. The agent uses this
+              file to maintain
+
+              '
+            - '# client side state across its executions.
+
+              '
+            - 'state_file = /var/awslogs/state/agent-state
+
+              '
+            - '[/var/log/messages]
+
+              '
+            - 'datetime_format = %b %d %H:%M:%S
+
+              '
+            - 'file = /var/log/messages
+
+              '
+            - 'buffer_duration = 5000
+
+              '
+            - 'log_group_name = veoslogs
+
+              '
+            - 'log_stream_name = {hostname}
+
+              '
+            - 'initial_position = start_of_file
+
+              '
+            - '%AWSLOGS-CONFIG-END%
+
+              '
+  LOB1MgmtIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'LOB1PublicSn'
+      GroupSet:
+        - !ImportValue
+          Fn::Sub: ${VPCStackName}-VPCIGWSecurityGroupID
+      PrivateIpAddress: 10.2.1.6
+  LOB1WebIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'LOB1WebSn'
+      PrivateIpAddress: 10.2.11.6
+  LOB1AppIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'LOB1AppSn'
+      PrivateIpAddress: 10.2.12.6
+  LOB1WebNetworkInterfaceAttachment:
+    Type: AWS::EC2::NetworkInterfaceAttachment
+    Properties:
+      InstanceId: !Ref 'LOB1vRouterInstance'
+      NetworkInterfaceId: !Ref 'LOB1WebIntf'
+      DeviceIndex: '1'
+  LOB1AppNetworkInterfaceAttachment:
+    Type: AWS::EC2::NetworkInterfaceAttachment
+    Properties:
+      InstanceId: !Ref 'LOB1vRouterInstance'
+      NetworkInterfaceId: !Ref 'LOB1AppIntf'
+      DeviceIndex: '2'
+  LOB1WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: vrouter-demo
+      ImageId: ami-c10d1cb8
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          SubnetId: !Ref 'LOB1WebSn'
+      Tags:
+        - Key: Name
+          Value: lob-1-web
+  LOB1AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: vrouter-demo
+      ImageId: ami-c10d1cb8
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          SubnetId: !Ref 'LOB1AppSn'
+      Tags:
+        - Key: Name
+          Value: lob-1-app

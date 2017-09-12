@@ -90,38 +90,6 @@
                 ]
             }
         },
-        "snwebwest1a": {
-            "Type": "AWS::EC2::Subnet",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "demovpc"
-                },
-                "CidrBlock": "10.2.11.0/24",
-                "AvailabilityZone": "us-west-1a",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "subnet-vrfweb-west1a"
-                    }
-                ]
-            }
-        },
-        "snappwest1a": {
-            "Type": "AWS::EC2::Subnet",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "demovpc"
-                },
-                "CidrBlock": "10.2.12.0/24",
-                "AvailabilityZone": "us-west-1a",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "subnet-vrfapp-west1a"
-                    }
-                ]
-            }
-        },
         "Ec2Instance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
@@ -152,19 +120,6 @@
                     "Ref": "snoutwest1a"
                 },
                 "GroupSet" : [ {"Ref" : "sshsg"} ]
-            }
-        },
-
-        "AppNetworkInterfaceAttachment": {
-            "Type": "AWS::EC2::NetworkInterfaceAttachment",
-            "Properties": {
-                "InstanceId": {
-                    "Ref": "Ec2Instance"
-                },
-                "NetworkInterfaceId": {
-                    "Ref": "AppVrfIntf"
-                },
-                "DeviceIndex": "2"
             }
         }
     }

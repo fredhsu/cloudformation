@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo VPC with sg and igw and security groups
+Resources:
+  DemoVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      Tags:
+        - Key: Name
+          Value: demo-vpc
+        - Key: User
+          Value: fredlhsu
+  DemoPublicSN:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      VpcId: !Ref 'DemoVPC'
+      CidrBlock: "10.1.1.0/24"
+      AvailabilityZone: "us-west-2a"
+      MapPublicIpOnLaunch: "true"
+      Tags:
+        - Key: Name
+          Value: demo-public-subnet
+        - Key: User
+          Value: fredlhsu
+  DemoMgmtSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SSH/HTTP/HTTPS for mgmt
+      VpcId: !Ref 'DemoVPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+  DemoIPSecSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ESP/AH/UDP for IPSec
+      VpcId: !Ref 'DemoVPC'
+      SecurityGroupIngress:
+        - IpProtocol: '50'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: '51'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '500'
+          ToPort: '500'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '4500'
+          ToPort: '4500'
+          CidrIp: 0.0.0.0/0
+  DemoVPCPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'DemoVPC'
+      Tags:
+        - Key: Name
+          Value: demo-public-routetable
+  DemoIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: demo-igw
+  DemoPublicSubnetRouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      SubnetId: !Ref 'DemoPublicSN'
+      RouteTableId: !Ref 'DemoVPCPublicRouteTable'
+      Tags:
+        - Key: Name
+          Value: demo-public-subnet
+        - Key: User
+          Value: fredlhsu
+  DemoAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'DemoVPC'
+      InternetGatewayId: !Ref 'DemoIGW'
+  DemoInternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref 'DemoVPCPublicRouteTable'
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'DemoIGW'
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref 'DemoVPC'
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCID'
+  VPCRouteTable:
+    Description: Route Table for the public side of VPC
+    Value: !Ref 'DemoVPCPublicRouteTable'
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCRouteTableID'
+  MgmtSecurityGroup:
+    Description: The security group ID to use for vrouter
+    Value: !GetAtt 'DemoMgmtSG.GroupId'
+    Export:
+      Name: !Sub '${AWS::StackName}-DemoMgmtSecurityGroupID'
+  IPSecSecurityGroup:
+    Description: The security group ID to use for vrouter
+    Value: !GetAtt 'DemoIPSecSG.GroupId'
+    Export:
+      Name: !Sub '${AWS::StackName}-DemoIPSecSecurityGroupID'
+  VPCIGW:
+    Description: VPC Internet Gateway
+    Value: !Ref 'DemoIGW'
+    Export:
+      Name: !Sub '${AWS::StackName}-DemoIGW'
+# TODO Need to add public subnet
+# TODO add vRouter
+# TODO add default route to igw
