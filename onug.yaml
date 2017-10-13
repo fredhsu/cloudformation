@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Student VPC, subnets, route tables, igw, sg, test VM
+Parameters: 
+  ID:
+    Description: ID Number of student
+    Type: String
+    Default: 5
+  VPCCidr: 
+    Description: Subnet for VPC
+    Type: String
+    Default: 10.5.0.0/16
+  Subnet1Cidr: 
+    Description: Subnet for subnet 1
+    Type: String
+    Default: 10.5.1.0/24
+  Subnet2Cidr: 
+    Description: Subnet for subnet 2
+    Type: String
+    Default: 10.5.11.0/24
+Resources:
+  studentvpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCidr
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}
+          - {ID: !Ref ID}
+  veossg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and VPC
+      VpcId: !Ref 'studentvpc'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIp: 10.0.0.0/8
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.0.0.0/8
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-security-group
+          - {ID: !Ref ID}
+  studentvpcigw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-igw
+          - {ID: !Ref ID}
+  AttachGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'studentvpc'
+      InternetGatewayId: !Ref 'studentvpcigw'
+  subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'studentvpc'
+      CidrBlock: !Ref Subnet1Cidr
+      AvailabilityZone: ca-central-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref Subnet1Cidr
+  subnet1RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'studentvpc'
+      Tags:
+        - Key: Name
+          Value: !Ref Subnet1Cidr
+  publicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGW
+    Properties:
+      RouteTableId: !Ref 'subnet2RT'
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'studentvpcigw'
+  peerlinkRoute:
+    Type: AWS::EC2::Route
+    DependsOn: vpcPeer
+    Properties:
+      RouteTableId: !Ref 'subnet1RT'
+      DestinationCidrBlock: 10.1.100.0/24
+      VpcPeeringConnectionId: !Ref 'vpcPeer'
+  PublicRTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref subnet1
+      RouteTableId: !Ref subnet1RT    
+  subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'studentvpc'
+      CidrBlock: !Ref Subnet2Cidr
+      AvailabilityZone: ca-central-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Ref Subnet2Cidr
+  subnet2RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'studentvpc'
+      Tags:
+        - Key: Name
+          Value: !Ref Subnet2Cidr
+  veosRoute:
+    Type: AWS::EC2::Route
+    DependsOn: vEOSIntfSubnet2
+    Properties:
+      RouteTableId: !Ref 'subnet2RT'
+      DestinationCidrBlock: 10.0.0.0/8
+      NetworkInterfaceId: !Ref 'vEOSIntfSubnet2'
+  subnet2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref subnet2
+      RouteTableId: !Ref subnet2RT    
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: ca-central-1a
+      ImageId: ami-fd55ec99
+      InstanceType: t2.micro
+      KeyName: Arista-vEOS-Router-Training
+      NetworkInterfaces:
+       - NetworkInterfaceId: !Ref VMIntf
+         DeviceIndex: 0
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-vmhost
+          - {ID: !Ref ID}
+  VMIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'subnet2'
+      GroupSet:
+      - !Ref veossg
+      PrivateIpAddress: !Sub
+      - 10.${ID}.11.10 
+      - {ID: !Ref ID}
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-VM Host Interface
+          - {ID: !Ref ID}
+  vEOSIntfSubnet1:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'subnet1'
+      GroupSet:
+      - !Ref veossg
+      PrivateIpAddress: !Sub
+      - 10.${ID}.1.6 
+      - {ID: !Ref ID}
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-veos-subnet1-interface
+          - {ID: !Ref ID}
+  vEOSIntfSubnet2:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'subnet2'
+      GroupSet:
+      - !Ref veossg
+      PrivateIpAddress: !Sub
+      - 10.${ID}.11.6 
+      - {ID: !Ref ID}
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-veos-subnet2-interface
+          - {ID: !Ref ID}
+  vpcPeer:
+    Type: "AWS::EC2::VPCPeeringConnection"
+    Properties: 
+      PeerVpcId: vpc-d1a8efb8
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - vpc-${ID}-peerlink-to-transit
+          - {ID: !Ref ID}
+      VpcId: !Ref 'studentvpc'

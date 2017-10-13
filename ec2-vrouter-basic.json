@@ -5,8 +5,8 @@
         "Ec2Instance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
-                "KeyName": "awsdemo",
-                "ImageId": "ami-60633e00",
+                "KeyName": "fred-kp",
+                "ImageId": "ami-cbc7e6ae",
                 "InstanceType": "c4.large"
             }
         }
