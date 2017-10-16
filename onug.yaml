@@ -90,7 +90,7 @@ Resources:
     DependsOn: vpcPeer
     Properties:
       RouteTableId: !Ref 'subnet1RT'
-      DestinationCidrBlock: 10.1.100.0/24
+      DestinationCidrBlock: 10.100.1.0/24
       VpcPeeringConnectionId: !Ref 'vpcPeer'
   PublicRTAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -133,6 +133,11 @@ Resources:
       ImageId: ami-fd55ec99
       InstanceType: t2.micro
       KeyName: Arista-vEOS-Router-Training
+      UserData: 
+        Fn::Base64: !Sub | 
+          #!/bin/bash -xe 
+          yum update -y 
+          yum --enablerepo=epel install -y iperf iperf3
       NetworkInterfaces:
        - NetworkInterfaceId: !Ref VMIntf
          DeviceIndex: 0
