@@ -25,7 +25,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}
+          - VPC-${ID}
           - {ID: !Ref ID}
   veossg:
     Type: AWS::EC2::SecurityGroup
@@ -54,7 +54,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-igw
+          - VPC-${ID}-IGW
           - {ID: !Ref ID}
   AttachGW:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -139,7 +139,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-vmhost
+          - Host-${ID}
           - {ID: !Ref ID}
   VMIntf:
     Type: AWS::EC2::NetworkInterface
@@ -154,7 +154,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-VM Host Interface
+          - Host-${ID}-ETH0
           - {ID: !Ref ID}
   vEOSIntfSubnet1:
     Type: AWS::EC2::NetworkInterface
@@ -169,7 +169,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-veos-subnet1-interface
+          - vRouter-${ID}-ETH1
           - {ID: !Ref ID}
   vEOSIntfSubnet2:
     Type: AWS::EC2::NetworkInterface
@@ -184,7 +184,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-veos-subnet2-interface
+          - vRouter-${ID}-ETH2
           - {ID: !Ref ID}
   vpcPeer:
     Type: "AWS::EC2::VPCPeeringConnection"
@@ -193,6 +193,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-          - vpc-${ID}-peerlink-to-transit
+          - VPC-${ID}<>Transit
           - {ID: !Ref ID}
       VpcId: !Ref 'studentvpc'
