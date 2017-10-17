@@ -128,6 +128,7 @@ Resources:
       RouteTableId: !Ref subnet2RT    
   Ec2Instance:
     Type: AWS::EC2::Instance
+    DependsOn: studentvpcigw
     Properties:
       AvailabilityZone: ca-central-1a
       ImageId: ami-fd55ec99
@@ -201,3 +202,11 @@ Resources:
           - VPC-${ID}<>Transit
           - {ID: !Ref ID}
       VpcId: !Ref 'studentvpc'
+Outputs:
+  HostPublicIP:
+    Description: Public IP of Host
+    Value: !GetAtt Ec2Instance.PublicIp
+    Export:
+      Name: !Sub
+        - Host-${ID}-publicIP
+        - {ID: !Ref ID}
