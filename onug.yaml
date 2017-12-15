@@ -147,6 +147,34 @@ Resources:
           Value: !Sub
           - Host-${ID}
           - {ID: !Ref ID}
+  VEOSInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: labvpc
+      ImageId: ami-4fbb5837
+      InstanceType: c4.large
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref 'MgmtIntf'
+          DeviceIndex: '0'
+      UserData:
+        Fn::Base64: "%EOS-STARTUP-CONFIG-START%\nusername cvpadmin secret arista123\nmanagement api http-commands\nno shut\n%EOS-STARTUP-CONFIG-END%\n"
+        # Add Sub! and insert a loopback with public IP address
+        # !GetAtt Ec2Instance.PublicIp
+      Tags:
+        - Key: Name
+          Value: veos-launchdemo-west2a
+        - Key: User
+          Value: fredlhsu
+  MgmtIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'vEOSIntfSubnet1'
+      GroupSet:
+        - !Ref 'sshsg'
+      Tags:
+        - Key: Name
+          Value: veos-mgmtintf
   VMIntf:
     Type: AWS::EC2::NetworkInterface
     Properties:

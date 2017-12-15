@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with sg and igw
+Parameters: 
+  VPCID:
+    Description: VPC to add to
+    Type: String
+    Default: "vpc-c0efd9a6"
+  Subnet1: 
+    Description: Subnet for subnet 1
+    Type: String
+    Default: subnet-2d562e4b
+  Subnet2: 
+    Description: Subnet for subnet 2
+    Type: String
+    Default: subnet-c04931a6
+Resources:
+  sshsg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '500'
+          ToPort: '500'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: '4500'
+          ToPort: '4500'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: '50'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: '51'
+          CidrIp: 0.0.0.0/0
+  vEOSInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: launchdemo
+      ImageId: ami-4fbb5837
+      InstanceType: c4.large
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref 'MgmtIntf'
+          DeviceIndex: '0'
+      UserData:
+        Fn::Base64: "%EOS-STARTUP-CONFIG-START%\nusername cvpadmin secret arista123\nmanagement api http-commands\nno shut\n%EOS-STARTUP-CONFIG-END%\n"
+        # Add Sub! and insert a loopback with public IP address
+        # !GetAtt Ec2Instance.PublicIp
+      Tags:
+        - Key: Name
+          Value: veos-acv
+        - Key: User
+          Value: fredlhsu
+  MgmtIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'Subnet1'
+      GroupSet:
+        - !Ref 'sshsg'
+      Tags:
+        - Key: Name
+          Value: acv-mgmtintf
+  Subnet2Intf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'Subnet2'
+      GroupSet:
+        - !Ref 'sshsg'
+      Tags:
+        - Key: Name
+          Value: acv-sn2intf
+
