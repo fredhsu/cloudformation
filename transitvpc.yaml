@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Transit VPC with all in one
+Resources:
+  TransitVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.100.0.0/16
+      Tags:
+        - Key: Name
+          Value: transit-vpc
+  TransitVPCSecGrp:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH
+      VpcId: !Ref 'TransitVPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+  TransitIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: transit-igw
+  TransitAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'TransitVPC'
+      InternetGatewayId: !Ref 'TransitIGW'
+  TransitPublicSn:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'TransitVPC'
+      CidrBlock: 10.100.1.0/24
+      AvailabilityZone: us-west-2c
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: transit-public-subnet
+  TransitPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'TransitVPC'
+      Tags:
+        - Key: Name
+          Value: transit-public-routetable
+  TransitInternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: TransitAttachGateway
+    Properties:
+      RouteTableId: !Ref 'TransitPublicRouteTable'
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref 'TransitIGW'
+  TransitPublicRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'TransitPublicSn'
+      RouteTableId: !Ref 'TransitPublicRouteTable'
+  TransitPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'TransitVPC'
+      Tags:
+        - Key: Name
+          Value: Transit-private-routetable
+  TransitPrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: TransitWebNetworkInterfaceAttachment
+    Properties:
+      RouteTableId: !Ref 'TransitPrivateRouteTable'
+      DestinationCidrBlock: 0.0.0.0/0
+      NetworkInterfaceId: !Ref 'TransitPrivateIntf'
+  TransitWebRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'TransitPrivateSn'
+      RouteTableId: !Ref 'TransitPrivateRouteTable'
+  TransitPrivateSn:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'TransitVPC'
+      CidrBlock: 10.100.11.0/24
+      AvailabilityZone: us-west-2c
+      Tags:
+        - Key: Name
+          Value: Transit-private-subnet
+  TransitvRouterInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: vrouter-demo
+      ImageId: ami-ced641ae
+      InstanceType: c4.large
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref 'TransitMgmtIntf'
+          DeviceIndex: '0'
+      Tags:
+        - Key: Name
+          Value: Transit-vrouter-1
+      UserData: !Base64
+        Fn::Sub: '%EOS-STARTUP-CONFIG-START%
+
+          username fredlhsu secret arista
+
+          interface Ethernet 2
+
+          description Transit-Private
+
+          mtu 9001
+
+          no switchport
+
+          ip address ${TransitPrivateIntf.PrimaryPrivateIpAddress}/24
+
+
+          %EOS-STARTUP-CONFIG-END%
+
+          %AWS-CONFIG-START%
+
+          [plugins]
+
+          cwlogs = cwlogs
+
+          [default]
+
+          region = us-west-2
+
+          %AWS-CONFIG-END%
+
+
+          %AWSLOGS-CONFIG-START%
+
+          [general]
+
+          # Path to the CloudWatch Logs agent''s state file. The agent uses this file
+          to maintain
+
+          # client side state across its executions.
+
+          state_file = /var/awslogs/state/agent-state
+
+          [/var/log/messages]
+
+          datetime_format = %b %d %H:%M:%S
+
+          file = /var/log/messages
+
+          buffer_duration = 5000
+
+          log_group_name = veoslogs
+
+          log_stream_name = {hostname}
+
+          initial_position = start_of_file
+
+          %AWSLOGS-CONFIG-END%
+
+          '
+  TransitMgmtIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'TransitPublicSn'
+      GroupSet:
+        - !Ref 'TransitVPCSecGrp'
+      PrivateIpAddress: 10.100.1.6
+  TransitPrivateIntf:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SourceDestCheck: false
+      SubnetId: !Ref 'TransitPrivateSn'
+      PrivateIpAddress: 10.100.11.6
+  TransitPrivateNetworkInterfaceAttachment:
+    Type: AWS::EC2::NetworkInterfaceAttachment
+    Properties:
+      InstanceId: !Ref 'TransitvRouterInstance'
+      NetworkInterfaceId: !Ref 'TransitPrivateIntf'
+      DeviceIndex: '1'
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref 'TransitVPC'
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCID'
+  vRouterSecurityGroup:
+    Description: The security group ID to use for vrouter
+    Value: !GetAtt 'TransitVPCSecGrp.GroupId'
+    Export:
+      Name: !Sub '${AWS::StackName}-SecurityGroupID'
+  PublicRouteTableID:
+    Description: Public Route Table ID
+    Value: !Ref 'TransitPublicRouteTable'
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicRTID'
